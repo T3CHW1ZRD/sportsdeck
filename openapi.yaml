@@ -1,0 +1,2092 @@
+openapi: 3.0.3
+info:
+  title: SportsDeck API - Premier League
+  description: |
+    Backend API for SportsDeck, a Premier League discussion platform.
+    Features include authentication, match data (via football-data.org), discussion threads,
+    polls, moderation with AI-powered content analysis, social features, and AI enhancements.
+  version: 1.0.0
+  contact:
+    name: SportsDeck
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token obtained from /api/auth/login or /api/auth/signup
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        username:
+          type: string
+        avatar:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [USER, ADMIN]
+        isBanned:
+          type: boolean
+        favoriteTeamId:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Team:
+      type: object
+      properties:
+        id:
+          type: integer
+        externalId:
+          type: integer
+        name:
+          type: string
+        shortName:
+          type: string
+        tla:
+          type: string
+        crest:
+          type: string
+        venue:
+          type: string
+
+    Match:
+      type: object
+      properties:
+        id:
+          type: integer
+        externalId:
+          type: integer
+        matchday:
+          type: integer
+        utcDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [SCHEDULED, TIMED, IN_PLAY, PAUSED, FINISHED, POSTPONED, CANCELLED]
+        stage:
+          type: string
+        homeTeamId:
+          type: integer
+        awayTeamId:
+          type: integer
+        homeScore:
+          type: integer
+          nullable: true
+        awayScore:
+          type: integer
+          nullable: true
+        venue:
+          type: string
+
+    Thread:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        type:
+          type: string
+          enum: [MATCH, TEAM, GENERAL]
+        isAutoCreated:
+          type: boolean
+        isHidden:
+          type: boolean
+        authorId:
+          type: integer
+        teamId:
+          type: integer
+          nullable: true
+        matchId:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+
+    Tag:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+        content:
+          type: string
+        threadId:
+          type: integer
+        authorId:
+          type: integer
+        parentId:
+          type: integer
+          nullable: true
+        isHidden:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Poll:
+      type: object
+      properties:
+        id:
+          type: integer
+        question:
+          type: string
+        threadId:
+          type: integer
+        authorId:
+          type: integer
+        deadline:
+          type: string
+          format: date-time
+        isHidden:
+          type: boolean
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/PollOption'
+
+    PollOption:
+      type: object
+      properties:
+        id:
+          type: integer
+        text:
+          type: string
+        pollId:
+          type: integer
+        _count:
+          type: object
+          properties:
+            votes:
+              type: integer
+
+    Report:
+      type: object
+      properties:
+        id:
+          type: integer
+        reason:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, DISMISSED, APPROVED]
+        aiVerdict:
+          type: string
+          nullable: true
+        aiScore:
+          type: number
+          nullable: true
+        reporterId:
+          type: integer
+        threadId:
+          type: integer
+          nullable: true
+        postId:
+          type: integer
+          nullable: true
+        pollId:
+          type: integer
+          nullable: true
+
+    Translation:
+      type: object
+      properties:
+        id:
+          type: integer
+        originalText:
+          type: string
+        translatedText:
+          type: string
+        textHash:
+          type: string
+          description: SHA-256 hash of original text, used for cache lookups
+        createdAt:
+          type: string
+          format: date-time
+
+    Appeal:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        reason:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED]
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+paths:
+  /api/auth/signup:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      description: Create a new account with email, password, and username. Returns JWT tokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, username]
+              properties:
+                email:
+                  type: string
+                  example: testuser@example.com
+                password:
+                  type: string
+                  example: password123
+                username:
+                  type: string
+                  example: testuser
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+              example:
+                user:
+                  id: 1
+                  email: testuser@example.com
+                  username: testuser
+                  role: USER
+                  createdAt: "2026-03-01T00:00:00.000Z"
+                accessToken: "eyJhbGciOiJIUzI1NiIs..."
+                refreshToken: "eyJhbGciOiJIUzI1NiIs..."
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email or username already in use
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in with credentials
+      description: Authenticate with email and password. Returns JWT tokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  example: testuser@example.com
+                password:
+                  type: string
+                  example: password123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+        '401':
+          description: Invalid credentials
+
+  /api/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      description: Get a new access token using a refresh token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Tokens refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+        '401':
+          description: Invalid refresh token
+
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out and invalidate refresh token
+      description: Invalidates the provided refresh token so it can no longer be used.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Logged out successfully"
+        '400':
+          description: Refresh token is required
+        '401':
+          description: Unauthorized
+
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user profile
+      description: Returns the authenticated user's profile with favorite team and counts.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+    put:
+      tags: [Auth]
+      summary: Update current user profile
+      description: Update username, avatar, favorite team, or password.
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                avatar:
+                  type: string
+                favoriteTeamId:
+                  type: integer
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+      responses:
+        '200':
+          description: Profile updated
+        '401':
+          description: Unauthorized
+        '409':
+          description: Username taken
+
+  /api/auth/avatar:
+    post:
+      tags: [Auth]
+      summary: Upload profile picture
+      description: |
+        Upload a new avatar image. Accepts JPEG, PNG, GIF, and WebP formats.
+        Maximum file size is 5MB. The image is validated via magic bytes to ensure it is a real image.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image file (JPEG, PNG, GIF, or WebP, max 5MB)
+      responses:
+        '200':
+          description: Avatar uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  avatar:
+                    type: string
+                    description: URL path to the uploaded avatar
+                    example: "/uploads/avatars/1_1711100000000.jpg"
+        '400':
+          description: No file provided, invalid file type, file too large, or not a valid image
+        '401':
+          description: Unauthorized
+        '403':
+          description: User is banned
+
+  /api/teams:
+    get:
+      tags: [Teams]
+      summary: List all teams
+      description: Returns paginated list of Premier League teams from the database.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of teams
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Team'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /api/teams/{id}:
+    get:
+      tags: [Teams]
+      summary: Get team by ID
+      description: Returns team details with recent home and away matches.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Team details
+        '404':
+          description: Team not found
+
+  /api/matches:
+    get:
+      tags: [Matches]
+      summary: List matches
+      description: Returns paginated list of matches with optional filters.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: matchday
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [SCHEDULED, TIMED, FINISHED, POSTPONED]
+        - name: teamId
+          in: query
+          schema:
+            type: integer
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: stage
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of matches
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Match'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /api/matches/{id}:
+    get:
+      tags: [Matches]
+      summary: Get match by ID
+      description: Returns match details with team info and associated threads.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Match details
+        '404':
+          description: Match not found
+
+  /api/matches/matchday:
+    get:
+      tags: [Matches]
+      summary: List all available matchdays
+      description: Returns all matchday numbers that have matches in the database, with match counts.
+      responses:
+        '200':
+          description: List of matchdays
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  matchdays:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        matchday:
+                          type: integer
+                        matchCount:
+                          type: integer
+
+  /api/matches/matchday/{matchday}:
+    get:
+      tags: [Matches]
+      summary: Get matches by matchday
+      description: Returns all matches for a specific matchday/gameweek.
+      parameters:
+        - name: matchday
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Matches for the matchday
+
+  /api/matches/sync:
+    post:
+      tags: [Matches]
+      summary: Sync matches from external API
+      description: Fetch and sync matches from football-data.org to the local database. Updates scores and adds new matches.
+      responses:
+        '200':
+          description: Sync results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  total:
+                    type: integer
+              example:
+                message: "Sync complete. Created: 10, Updated: 5"
+                total: 380
+
+  /api/standings:
+    get:
+      tags: [Matches]
+      summary: Get league standings
+      description: Returns current Premier League standings from football-data.org (cached).
+      responses:
+        '200':
+          description: League standings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  standings:
+                    type: array
+                    items:
+                      type: object
+                  cached:
+                    type: boolean
+
+  /api/threads:
+    get:
+      tags: [Threads]
+      summary: List threads
+      description: Returns paginated threads with optional filters by type, team, match, or author.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [MATCH, TEAM, GENERAL]
+        - name: teamId
+          in: query
+          schema:
+            type: integer
+        - name: matchId
+          in: query
+          schema:
+            type: integer
+        - name: authorId
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of threads
+    post:
+      tags: [Threads]
+      summary: Create a new thread
+      description: Create a discussion thread. Requires authentication. Banned users cannot create threads.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, content, type]
+              properties:
+                title:
+                  type: string
+                  example: "Title race discussion"
+                content:
+                  type: string
+                  example: "Who do you think will win the league?"
+                type:
+                  type: string
+                  enum: [MATCH, TEAM, GENERAL]
+                teamId:
+                  type: integer
+                  description: Required for TEAM threads
+                matchId:
+                  type: integer
+                  description: Required for MATCH threads
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  example: ["discussion", "prediction"]
+      responses:
+        '201':
+          description: Thread created
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthorized
+        '403':
+          description: User is banned
+
+  /api/threads/{id}:
+    get:
+      tags: [Threads]
+      summary: Get thread by ID
+      description: Returns thread with posts count, polls, and tags.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Thread details
+        '404':
+          description: Thread not found
+    put:
+      tags: [Threads]
+      summary: Update a thread
+      description: Update title, content, or tags. Only the author or admin can edit.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                content:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Thread updated
+        '403':
+          description: Not authorized to edit
+    delete:
+      tags: [Threads]
+      summary: Delete a thread
+      description: Only the author or admin can delete.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Thread deleted
+        '403':
+          description: Not authorized
+
+  /api/threads/search:
+    get:
+      tags: [Threads]
+      summary: Search threads
+      description: Search threads by query, title, author, team, or tag.
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: General search query
+        - name: title
+          in: query
+          schema:
+            type: string
+        - name: author
+          in: query
+          schema:
+            type: string
+        - name: team
+          in: query
+          schema:
+            type: string
+        - name: tag
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Search results
+
+  /api/threads/{id}/posts:
+    get:
+      tags: [Posts]
+      summary: List posts in a thread
+      description: Returns paginated top-level posts with their replies.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of posts
+    post:
+      tags: [Posts]
+      summary: Create a post in a thread
+      description: Add a comment to a thread. Can include parentId for replies. Auto-flagged by AI for toxicity.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  example: "Great match! What a goal!"
+                parentId:
+                  type: integer
+                  description: ID of parent post for replies
+      responses:
+        '201':
+          description: Post created
+        '400':
+          description: Thread closed or validation error
+        '401':
+          description: Unauthorized
+        '403':
+          description: User is banned
+
+  /api/posts/{id}:
+    get:
+      tags: [Posts]
+      summary: Get post by ID
+      description: Returns post with replies and edit history.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Post details
+        '404':
+          description: Post not found
+    put:
+      tags: [Posts]
+      summary: Edit a post
+      description: Edit content. Old version is saved for history. Only the author can edit.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+      responses:
+        '200':
+          description: Post updated with version history
+        '403':
+          description: Not authorized
+    delete:
+      tags: [Posts]
+      summary: Delete a post
+      description: Only the author or admin can delete.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Post deleted
+
+  /api/posts/{id}/versions:
+    get:
+      tags: [Posts]
+      summary: Get post edit history
+      description: View all previous versions of an edited post.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Version history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  currentContent:
+                    type: string
+                  versions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        content:
+                          type: string
+                        createdAt:
+                          type: string
+                          format: date-time
+                  totalEdits:
+                    type: integer
+
+  /api/posts/{id}/like:
+    get:
+      tags: [Posts]
+      summary: Get like status for a post
+      description: Returns whether the current user has liked the post and the total like count. Authentication is optional — if not authenticated, liked will be false.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Like status and count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  liked:
+                    type: boolean
+                  likeCount:
+                    type: integer
+        '400':
+          description: Invalid post ID
+        '404':
+          description: Post not found
+    post:
+      tags: [Posts]
+      summary: Like or unlike a post
+      description: Toggles the like status on a post. If the user has not liked it, a like is created. If already liked, the like is removed.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Post liked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  liked:
+                    type: boolean
+                    example: true
+                  likeCount:
+                    type: integer
+        '200':
+          description: Post unliked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  liked:
+                    type: boolean
+                    example: false
+                  likeCount:
+                    type: integer
+        '400':
+          description: Invalid post ID
+        '401':
+          description: Unauthorized
+        '403':
+          description: User is banned
+        '404':
+          description: Post not found
+
+  /api/threads/{id}/polls:
+    get:
+      tags: [Polls]
+      summary: List polls in a thread
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of polls
+    post:
+      tags: [Polls]
+      summary: Create a poll in a thread
+      description: Create a poll with a question, options, and deadline.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question, options, deadline]
+              properties:
+                question:
+                  type: string
+                  example: "Who will be man of the match?"
+                options:
+                  type: array
+                  items:
+                    type: string
+                  example: ["Player A", "Player B", "Player C"]
+                deadline:
+                  type: string
+                  format: date-time
+                  example: "2026-05-30T23:59:59Z"
+      responses:
+        '201':
+          description: Poll created
+        '400':
+          description: Validation error
+
+  /api/polls/{id}:
+    get:
+      tags: [Polls]
+      summary: Get poll by ID
+      description: Returns poll with options, vote counts, and expiry status.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Poll details
+    put:
+      tags: [Polls]
+      summary: Update a poll
+      description: Update question or deadline. Only the author can edit.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                question:
+                  type: string
+                deadline:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Poll updated
+    delete:
+      tags: [Polls]
+      summary: Delete a poll
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Poll deleted
+
+  /api/polls/{id}/vote:
+    post:
+      tags: [Polls]
+      summary: Vote on a poll
+      description: Vote for an option. Can change vote. Cannot vote after deadline. Banned users cannot vote.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [optionId]
+              properties:
+                optionId:
+                  type: integer
+      responses:
+        '201':
+          description: Vote recorded
+        '200':
+          description: Vote updated
+        '400':
+          description: Poll expired or invalid option
+
+  /api/polls/{id}/results:
+    get:
+      tags: [Polls]
+      summary: Get poll results
+      description: Returns vote counts and percentages per option.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Poll results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  question:
+                    type: string
+                  totalVotes:
+                    type: integer
+                  isExpired:
+                    type: boolean
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        text:
+                          type: string
+                        votes:
+                          type: integer
+                        percentage:
+                          type: string
+
+  /api/reports:
+    post:
+      tags: [Moderation]
+      summary: Report a post, thread, or poll
+      description: |
+        Report content as inappropriate. AI verdict is auto-generated.
+        Exactly one of threadId, postId, or pollId must be provided.
+        Each user can only report a given item once (regardless of report status).
+        AI toxicity scores are cached to avoid redundant API calls.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  example: "This post contains offensive language"
+                threadId:
+                  type: integer
+                postId:
+                  type: integer
+                pollId:
+                  type: integer
+      responses:
+        '201':
+          description: Report created with AI verdict
+        '400':
+          description: Missing required fields
+        '409':
+          description: Duplicate report (user already reported this item)
+    get:
+      tags: [Moderation]
+      summary: List my reports
+      description: List reports submitted by the current user.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User's reports
+
+  /api/admin/reports:
+    get:
+      tags: [Admin]
+      summary: List all reports (Admin)
+      description: View all reports with configurable sorting. Filter by status. Includes poll reports.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, DISMISSED, ALL]
+            default: PENDING
+        - name: sortBy
+          in: query
+          description: Field to sort by
+          schema:
+            type: string
+            enum: [aiScore, createdAt, status]
+            default: aiScore
+        - name: sortOrder
+          in: query
+          description: Sort direction
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Paginated reports with report counts
+        '403':
+          description: Admin access required
+
+  /api/admin/reports/{id}:
+    put:
+      tags: [Admin]
+      summary: Review a report (Admin)
+      description: |
+        Dismiss, approve, or reopen a report.
+        - **approve**: Hides the reported content (thread/post/poll) and marks all related pending reports as APPROVED.
+        - **dismiss**: Marks the report as DISMISSED.
+        - **reopen**: Sets a dismissed/approved report back to PENDING. If the report was previously approved, the content is unhidden.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [dismiss, approve, reopen]
+      responses:
+        '200':
+          description: Report reviewed
+        '400':
+          description: Invalid action or report already in target state
+        '403':
+          description: Admin access required
+
+  /api/admin/users:
+    get:
+      tags: [Admin]
+      summary: List all users (Admin)
+      description: Returns a paginated list of users. Supports filtering by ban status and searching by username or email.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: banned
+          in: query
+          description: Filter by ban status
+          schema:
+            type: string
+            enum: ["true", "false"]
+        - name: search
+          in: query
+          description: Search by username or email (case-insensitive)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated list of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        username:
+                          type: string
+                        email:
+                          type: string
+                        role:
+                          type: string
+                          enum: [USER, ADMIN]
+                        isBanned:
+                          type: boolean
+                        createdAt:
+                          type: string
+                          format: date-time
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+        '403':
+          description: Admin access required
+
+  /api/admin/users/{id}/ban:
+    post:
+      tags: [Admin]
+      summary: Ban a user (Admin)
+      description: Ban a user, preventing all write operations including creating/editing/deleting threads, posts, polls, following/unfollowing, voting, removing followers, and updating their profile.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User banned
+        '400':
+          description: Cannot ban admin or already banned
+        '403':
+          description: Admin access required
+
+  /api/admin/users/{id}/unban:
+    post:
+      tags: [Admin]
+      summary: Unban a user (Admin)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User unbanned
+        '400':
+          description: User is not banned
+        '403':
+          description: Admin access required
+
+  /api/appeals:
+    post:
+      tags: [Appeals]
+      summary: Submit an appeal
+      description: Submit an appeal to have a ban lifted. Only for banned users.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  example: "I will follow community guidelines."
+      responses:
+        '201':
+          description: Appeal submitted
+        '400':
+          description: User is not banned
+        '409':
+          description: Pending appeal already exists
+    get:
+      tags: [Appeals]
+      summary: List appeals
+      description: Admins see all appeals, users see their own.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, REJECTED]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of appeals
+
+  /api/admin/appeals/{id}:
+    put:
+      tags: [Admin]
+      summary: Review an appeal (Admin)
+      description: Approve or reject. Approving unbans the user.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [approve, reject]
+      responses:
+        '200':
+          description: Appeal reviewed
+
+  /api/users/{id}:
+    get:
+      tags: [Social]
+      summary: Get user profile
+      description: Returns public user profile with follower/following counts and favorite team.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User profile
+        '404':
+          description: User not found
+
+  /api/users/{id}/activity:
+    get:
+      tags: [Social]
+      summary: Get user activity chart
+      description: Returns daily activity data (posts/threads) over a time period.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+            maximum: 365
+      responses:
+        '200':
+          description: Activity data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: integer
+                  days:
+                    type: integer
+                  totalThreads:
+                    type: integer
+                  totalPosts:
+                    type: integer
+                  activity:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                        threads:
+                          type: integer
+                        posts:
+                          type: integer
+                        total:
+                          type: integer
+
+  /api/users/{id}/posts:
+    get:
+      tags: [Social]
+      summary: Get user's posts
+      description: List posts by a specific user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: User's posts
+
+  /api/users/{id}/threads:
+    get:
+      tags: [Social]
+      summary: Get user's threads
+      description: List threads created by a specific user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: User's threads
+
+  /api/users/{id}/follow:
+    post:
+      tags: [Social]
+      summary: Follow a user
+      description: Follow a user. Cannot follow yourself. Banned users cannot follow.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Now following user
+        '400':
+          description: Cannot follow yourself
+        '409':
+          description: Already following
+    delete:
+      tags: [Social]
+      summary: Unfollow a user
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Unfollowed
+        '404':
+          description: Not following this user
+
+  /api/users/{id}/followers:
+    get:
+      tags: [Social]
+      summary: List user's followers
+      description: Sorted by follow time (newest first).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Follower list
+    delete:
+      tags: [Social]
+      summary: Remove a follower
+      description: Remove a follower from your own profile.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [followerId]
+              properties:
+                followerId:
+                  type: integer
+      responses:
+        '200':
+          description: Follower removed
+        '403':
+          description: Can only remove followers from own profile
+
+  /api/users/{id}/following:
+    get:
+      tags: [Social]
+      summary: List users being followed
+      description: Sorted by follow time (newest first).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Following list
+
+  /api/threads/{id}/like:
+    get:
+      tags: [Threads]
+      summary: Get thread like status and count
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Like status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  liked:
+                    type: boolean
+                  likeCount:
+                    type: integer
+    post:
+      tags: [Threads]
+      summary: Toggle like on a thread
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Like toggled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  liked:
+                    type: boolean
+                  likeCount:
+                    type: integer
+
+  /api/users/{id}/polls:
+    get:
+      tags: [Users]
+      summary: Get polls created by a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User polls
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Poll"
+                  pagination:
+                    $ref: "#/components/schemas/Pagination"
+
+  /api/threads/{id}/sentiment:
+    get:
+      tags: [AI Features]
+      summary: Get thread sentiment analysis
+      description: AI-analyzed sentiment of a thread's comments. For match threads, includes per-team sentiment.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Sentiment analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  threadId:
+                    type: integer
+                  overall:
+                    type: object
+                    properties:
+                      label:
+                        type: string
+                      score:
+                        type: number
+                  teamSentiments:
+                    type: array
+                    items:
+                      type: object
+
+  /api/ai/translate:
+    post:
+      tags: [AI Features]
+      summary: Translate text to English
+      description: |
+        Uses AI to translate text to English. Translations are cached in the database
+        so repeated requests for the same text are served instantly without calling the AI API.
+        All users benefit from cached translations.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  example: "Bonjour, comment allez-vous?"
+      responses:
+        '200':
+          description: Translation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  original:
+                    type: string
+                  translated:
+                    type: string
+                  cached:
+                    type: boolean
+                    description: Whether the result was served from cache
+
+  /api/ai/digest:
+    get:
+      tags: [AI Features]
+      summary: Get daily digest
+      description: Returns today's AI-generated digest summarizing top discussions, matches, and standings.
+      responses:
+        '200':
+          description: Daily digest
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  digest:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      content:
+                        type: string
+                      date:
+                        type: string
+  /api/stats:
+    get:
+      tags: [Stats]
+      summary: Get site-wide statistics
+      description: Returns aggregate counts of users, threads, polls, and posts. Results are cached for 6 hours.
+      responses:
+        '200':
+          description: Site statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: integer
+                    description: Total number of registered users
+                  threads:
+                    type: integer
+                    description: Total number of threads
+                  polls:
+                    type: integer
+                    description: Total number of polls
+                  posts:
+                    type: integer
+                    description: Total number of posts
+
+  /api/feed:
+    get:
+      tags: [Feed]
+      summary: Get personalized feed
+      description: |
+        Returns a personalized feed including:
+        - Posts from followed users
+        - Replies to your posts
+        - New threads for your favorite team
+        - Recent match scores for your favorite team
+        Events are grouped to avoid spam.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Personalized feed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  feed:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          enum: [new_post, reply_to_your_post, team_thread, team_match]
+                        data:
+                          type: object
+                        timestamp:
+                          type: string
+                          format: date-time
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          description: Unauthorized

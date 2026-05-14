@@ -1,0 +1,1382 @@
+{
+  "info": {
+    "name": "SportsDeck API - Premier League",
+    "description": "Complete API collection for SportsDeck - a Premier League discussion platform. Includes authentication, matches, threads, posts, polls, moderation, social features, and AI-powered enhancements.\n\nSetup:\n1. Run startup.sh to initialize the database\n2. Run run.sh to start the server\n3. Use the Signup or Login endpoints first - tokens are automatically saved\n4. All authenticated endpoints use the saved token automatically",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminAccessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "threadId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "postId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pollId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "teamId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "matchId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "reportId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "appealId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "targetUserId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Authentication endpoints: signup, login, refresh token, and profile management.",
+      "item": [
+        {
+          "name": "Signup",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', jsonData.refreshToken);",
+                  "    pm.collectionVariables.set('userId', jsonData.user.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"password123\",\n  \"username\": \"testuser\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "signup"]
+            },
+            "description": "Register a new user. Returns JWT tokens which are automatically saved."
+          }
+        },
+        {
+          "name": "Signup Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.collectionVariables.set('adminAccessToken', jsonData.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@sportsdeck.com\",\n  \"password\": \"<YOUR_ADMIN_PASSWORD>\",\n  \"username\": \"admin\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "signup"]
+            },
+            "description": "Register an admin user. Note: After signup, manually set role to ADMIN in DB, or use the seeded admin account."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', jsonData.refreshToken);",
+                  "    pm.collectionVariables.set('userId', jsonData.user.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Log in with email and password. Returns JWT tokens which are automatically saved."
+          }
+        },
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.collectionVariables.set('adminAccessToken', jsonData.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@sportsdeck.com\",\n  \"password\": \"<YOUR_ADMIN_PASSWORD>\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Log in as admin. Token is saved to adminAccessToken variable."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', jsonData.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Refresh the access token using a refresh token."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Logout and invalidate token so it can no longer be used."
+          }
+        },
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Get the authenticated user's profile including favorite team and follower counts."
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"newusername\",\n  \"avatar\": \"https://example.com/avatar.jpg\",\n  \"favoriteTeamId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Update profile fields: username, avatar, favoriteTeamId, or password (requires currentPassword)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Teams",
+      "description": "Browse league teams stored in the database.",
+      "item": [
+        {
+          "name": "List Teams",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.length > 0) {",
+                  "    pm.collectionVariables.set('teamId', jsonData.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/teams?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "teams"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "List all Premier League teams with pagination."
+          }
+        },
+        {
+          "name": "Get Team by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/teams/{{teamId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "teams", "{{teamId}}"]
+            },
+            "description": "Get a specific team with recent matches."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Matches",
+      "description": "View and manage match data from the Premier League.",
+      "item": [
+        {
+          "name": "Sync Matches from API",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/matches/sync",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "matches", "sync"]
+            },
+            "description": "Sync matches from football-data.org to the local database. Updates scores and adds new matches."
+          }
+        },
+        {
+          "name": "List Matches",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.length > 0) {",
+                  "    pm.collectionVariables.set('matchId', jsonData.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/matches?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "matches"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "matchday", "value": "1", "disabled": true },
+                { "key": "status", "value": "FINISHED", "disabled": true },
+                { "key": "teamId", "value": "1", "disabled": true },
+                { "key": "dateFrom", "value": "2025-08-01", "disabled": true },
+                { "key": "dateTo", "value": "2026-05-30", "disabled": true },
+                { "key": "stage", "value": "REGULAR_SEASON", "disabled": true }
+              ]
+            },
+            "description": "List matches with optional filters: matchday, status, teamId, dateFrom, dateTo."
+          }
+        },
+        {
+          "name": "Get Match by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/matches/{{matchId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "matches", "{{matchId}}"]
+            },
+            "description": "Get a specific match with team details and associated threads."
+          }
+        },
+        {
+          "name": "Get Matches by Matchday",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/matches/matchday/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "matches", "matchday", "1"]
+            },
+            "description": "Get all matches for a specific matchday."
+          }
+        },
+        {
+          "name": "Get Standings",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/standings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "standings"]
+            },
+            "description": "Get current Premier League standings from football-data.org (cached)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Threads",
+      "description": "Discussion threads for matches, teams, and general topics.",
+      "item": [
+        {
+          "name": "List Threads",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.length > 0) {",
+                  "    pm.collectionVariables.set('threadId', jsonData.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/threads?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "threads"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "type", "value": "GENERAL", "disabled": true },
+                { "key": "teamId", "value": "1", "disabled": true },
+                { "key": "matchId", "value": "1", "disabled": true },
+                { "key": "authorId", "value": "1", "disabled": true }
+              ]
+            },
+            "description": "List threads with optional filters: type (MATCH/TEAM/GENERAL), teamId, matchId, authorId."
+          }
+        },
+        {
+          "name": "Create Thread (General)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.thread) {",
+                  "    pm.collectionVariables.set('threadId', jsonData.thread.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Who will win the Premier League this season?\",\n  \"content\": \"Let's discuss the title race! Arsenal, Man City, and Liverpool are all looking strong.\",\n  \"type\": \"GENERAL\",\n  \"tags\": [\"title-race\", \"prediction\", \"discussion\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/threads",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "threads"]
+            },
+            "description": "Create a new general discussion thread with tags. Requires authentication."
+          }
+        },
+        {
+          "name": "Create Thread (Team)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.thread) {",
+                  "    pm.collectionVariables.set('threadId', jsonData.thread.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Transfer window discussion\",\n  \"content\": \"What transfers should our team make?\",\n  \"type\": \"TEAM\",\n  \"teamId\": 1,\n  \"tags\": [\"transfers\", \"discussion\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/threads",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "threads"]
+            },
+            "description": "Create a team-specific discussion thread. Requires teamId."
+          }
+        },
+        {
+          "name": "Get Thread by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/threads/{{threadId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "threads", "{{threadId}}"]
+            },
+            "description": "Get a specific thread with posts, polls, and tags."
+          }
+        },
+        {
+          "name": "Update Thread",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated title\",\n  \"content\": \"Updated content for this thread\",\n  \"tags\": [\"updated\", \"discussion\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/threads/{{threadId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "threads", "{{threadId}}"]
+            },
+            "description": "Update a thread's title, content, or tags. Only the author can edit."
+          }
+        },
+        {
+          "name": "Delete Thread",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/threads/{{threadId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "threads", "{{threadId}}"]
+            },
+            "description": "Delete a thread. Only the author or admin can delete."
+          }
+        },
+        {
+          "name": "Search Threads",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/threads/search?q=premier&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "threads", "search"],
+              "query": [
+                { "key": "q", "value": "premier" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "title", "value": "", "disabled": true },
+                { "key": "author", "value": "", "disabled": true },
+                { "key": "team", "value": "", "disabled": true },
+                { "key": "tag", "value": "", "disabled": true }
+              ]
+            },
+            "description": "Search threads by query text, title, author username, team name, or tag."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Posts",
+      "description": "Comments and replies within discussion threads.",
+      "item": [
+        {
+          "name": "List Posts in Thread",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.length > 0) {",
+                  "    pm.collectionVariables.set('postId', jsonData.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/threads/{{threadId}}/posts?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "threads", "{{threadId}}", "posts"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "List top-level posts in a thread with their replies."
+          }
+        },
+        {
+          "name": "Create Post in Thread",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.post) {",
+                  "    pm.collectionVariables.set('postId', jsonData.post.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Great discussion! I think Arsenal has the best chance this year.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/threads/{{threadId}}/posts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "threads", "{{threadId}}", "posts"]
+            },
+            "description": "Create a new post (comment) in a thread. Optionally include parentId for replies. Auto-flagged by AI for toxicity."
+          }
+        },
+        {
+          "name": "Create Reply to Post",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Absolutely not! Pep Guardiola's Man City will come out on top! Erling Haaland is looking great this season!\",\n  \"parentId\": {{postId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/threads/{{threadId}}/posts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "threads", "{{threadId}}", "posts"]
+            },
+            "description": "Reply to an existing post within a thread."
+          }
+        },
+        {
+          "name": "Get Post by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/{{postId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "{{postId}}"]
+            },
+            "description": "Get a specific post with replies and edit history."
+          }
+        },
+        {
+          "name": "Edit Post",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Updated: I changed my mind, Liverpool might edge it!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/{{postId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "{{postId}}"]
+            },
+            "description": "Edit a post. The old version is retained and accessible. Only the author can edit."
+          }
+        },
+        {
+          "name": "Delete Post",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/{{postId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "{{postId}}"]
+            },
+            "description": "Delete a post. Only the author or admin can delete."
+          }
+        },
+        {
+          "name": "Get Post Edit History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/posts/{{postId}}/versions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "posts", "{{postId}}", "versions"]
+            },
+            "description": "View all previous versions of an edited post."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Polls",
+      "description": "Create and vote on polls within discussion threads.",
+      "item": [
+        {
+          "name": "Create Poll in Thread",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.poll) {",
+                  "    pm.collectionVariables.set('pollId', jsonData.poll.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Who will win the Premier League?\",\n  \"options\": [\"Arsenal\", \"Manchester City\", \"Liverpool\", \"Chelsea\"],\n  \"deadline\": \"2026-05-30T23:59:59Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/threads/{{threadId}}/polls",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "threads", "{{threadId}}", "polls"]
+            },
+            "description": "Create a new poll in a thread with options and a deadline."
+          }
+        },
+        {
+          "name": "List Polls in Thread",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/threads/{{threadId}}/polls",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "threads", "{{threadId}}", "polls"]
+            },
+            "description": "List all polls in a specific thread."
+          }
+        },
+        {
+          "name": "Get Poll by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/polls/{{pollId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "polls", "{{pollId}}"]
+            },
+            "description": "Get a specific poll with options and vote counts."
+          }
+        },
+        {
+          "name": "Vote on Poll",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"optionId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/polls/{{pollId}}/vote",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "polls", "{{pollId}}", "vote"]
+            },
+            "description": "Vote on a poll option. Can change vote by voting again. Cannot vote after deadline."
+          }
+        },
+        {
+          "name": "Get Poll Results",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/polls/{{pollId}}/results",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "polls", "{{pollId}}", "results"]
+            },
+            "description": "Get the results of a poll with vote counts and percentages."
+          }
+        },
+        {
+          "name": "Update Poll",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Updated: Who will win the Premier League 2025/26?\",\n  \"deadline\": \"2026-06-15T23:59:59Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/polls/{{pollId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "polls", "{{pollId}}"]
+            },
+            "description": "Update a poll's question or deadline. Only the author can edit."
+          }
+        },
+        {
+          "name": "Delete Poll",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/polls/{{pollId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "polls", "{{pollId}}"]
+            },
+            "description": "Delete a poll. Only the author or admin can delete."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports & Moderation",
+      "description": "Report inappropriate content and admin moderation tools.",
+      "item": [
+        {
+          "name": "Create Report",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.report) {",
+                  "    pm.collectionVariables.set('reportId', jsonData.report.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"This post contains offensive language\",\n  \"postId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reports",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports"]
+            },
+            "description": "Report a post or thread. Provide reason and either postId or threadId. AI verdict is automatically generated."
+          }
+        },
+        {
+          "name": "My Reports",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports"]
+            },
+            "description": "List reports submitted by the current user."
+          }
+        },
+        {
+          "name": "[Admin] List All Reports",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/reports?status=PENDING&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "reports"],
+              "query": [
+                { "key": "status", "value": "PENDING" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "Admin: View all reports sorted by AI score and report count. Filter by status: PENDING, APPROVED, DISMISSED, ALL."
+          }
+        },
+        {
+          "name": "[Admin] Dismiss Report",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"dismiss\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/reports/{{reportId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "reports", "{{reportId}}"]
+            },
+            "description": "Admin: Dismiss a report as not warranting action."
+          }
+        },
+        {
+          "name": "[Admin] Approve Report (Hide Content)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"approve\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/reports/{{reportId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "reports", "{{reportId}}"]
+            },
+            "description": "Admin: Approve a report and hide the offending content."
+          }
+        },
+        {
+          "name": "[Admin] Ban User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{targetUserId}}/ban",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", "{{targetUserId}}", "ban"]
+            },
+            "description": "Admin: Ban a user. Prevents them from creating threads, posting, following, and voting."
+          }
+        },
+        {
+          "name": "[Admin] Unban User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{targetUserId}}/unban",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", "{{targetUserId}}", "unban"]
+            },
+            "description": "Admin: Unban a previously banned user."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Appeals",
+      "description": "Users can appeal bans. Admins can approve or reject appeals.",
+      "item": [
+        {
+          "name": "Submit Appeal",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.appeal) {",
+                  "    pm.collectionVariables.set('appealId', jsonData.appeal.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"I believe my ban was unjust. I will follow the community guidelines going forward.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/appeals",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "appeals"]
+            },
+            "description": "Submit an appeal to have your ban lifted. Only available to banned users."
+          }
+        },
+        {
+          "name": "List Appeals",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/appeals?status=PENDING&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "appeals"],
+              "query": [
+                { "key": "status", "value": "PENDING" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "List appeals. Admins see all, regular users see only their own."
+          }
+        },
+        {
+          "name": "[Admin] Approve Appeal",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"approve\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/appeals/{{appealId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "appeals", "{{appealId}}"]
+            },
+            "description": "Admin: Approve an appeal and unban the user."
+          }
+        },
+        {
+          "name": "[Admin] Reject Appeal",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminAccessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"reject\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/appeals/{{appealId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "appeals", "{{appealId}}"]
+            },
+            "description": "Admin: Reject an appeal. The user remains banned."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Social",
+      "description": "User profiles, follow/unfollow, and follower management.",
+      "item": [
+        {
+          "name": "Get User Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.user) {",
+                  "    pm.collectionVariables.set('targetUserId', jsonData.user.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}"]
+            },
+            "description": "Get a user's public profile with follower counts and favorite team."
+          }
+        },
+        {
+          "name": "Get User Activity",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}/activity?days=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}", "activity"],
+              "query": [
+                { "key": "days", "value": "30" }
+              ]
+            },
+            "description": "Get a user's activity chart data (posts/threads per day) over a period."
+          }
+        },
+        {
+          "name": "Get User Posts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}/posts?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}", "posts"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "List posts by a specific user."
+          }
+        },
+        {
+          "name": "Get User Threads",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}/threads?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}", "threads"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "List threads created by a specific user."
+          }
+        },
+        {
+          "name": "Follow User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{targetUserId}}/follow",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{targetUserId}}", "follow"]
+            },
+            "description": "Follow a user. Cannot follow yourself. Banned users cannot follow."
+          }
+        },
+        {
+          "name": "Unfollow User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{targetUserId}}/follow",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{targetUserId}}", "follow"]
+            },
+            "description": "Unfollow a user you are currently following."
+          }
+        },
+        {
+          "name": "List Followers",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}/followers?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}", "followers"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "List a user's followers, sorted by follow time."
+          }
+        },
+        {
+          "name": "Remove Follower",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"followerId\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}/followers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}", "followers"]
+            },
+            "description": "Remove a follower from your profile. You can only remove followers from your own profile."
+          }
+        },
+        {
+          "name": "List Following",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}/following?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}", "following"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "List users that this user is following, sorted by follow time."
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Features",
+      "description": "AI-powered enhancements: sentiment analysis, translation, and daily digest.",
+      "item": [
+        {
+          "name": "Thread Sentiment Analysis",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/threads/{{threadId}}/sentiment",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "threads", "{{threadId}}", "sentiment"]
+            },
+            "description": "Get AI-analyzed sentiment of a thread's comments. Shows overall mood and per-team sentiment for match threads."
+          }
+        },
+        {
+          "name": "Translate Text",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Bonjour, comment allez-vous?\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/translate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "translate"]
+            },
+            "description": "Translate text to English using AI. Provide the text (max 5000 characters)."
+          }
+        },
+        {
+          "name": "Get Daily Digest",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/digest",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "digest"]
+            },
+            "description": "Get today's AI-generated daily digest. Automatically generates a new one if none exists for today."
+          }
+        },
+      ]
+    },
+    {
+      "name": "Feed",
+      "description": "Personalized activity feed for authenticated users.",
+      "item": [
+        {
+          "name": "Get My Feed",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/feed?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "feed"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "Get a personalized feed with: posts from followed users, replies to your posts, new threads for your favorite team, and recent match scores. Events are grouped to avoid spam."
+          }
+        }
+      ]
+    }
+  ]
+}

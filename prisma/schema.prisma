@@ -1,0 +1,260 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgres" // for local use, change to sqlite
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  email         String   @unique
+  password      String?
+  username      String   @unique
+  avatar        String?
+  role          String   @default("USER")
+  isBanned      Boolean  @default(false)
+  favoriteTeamId Int?
+  provider      String   @default("local")
+  providerId    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  favoriteTeam  Team?    @relation(fields: [favoriteTeamId], references: [id])
+  threads       Thread[]
+  posts         Post[]
+  pollsCreated  Poll[]
+  pollVotes     PollVote[]
+  reports       Report[] @relation("Reporter")
+  following     Follow[] @relation("Follower")
+  followers     Follow[] @relation("Following")
+  appeals       Appeal[]
+  postLikes     PostLike[]
+  threadLikes   ThreadLike[]
+}
+
+model Team {
+  id         Int      @id @default(autoincrement())
+  externalId Int      @unique
+  name       String
+  shortName  String?
+  tla        String?
+  crest      String?
+  venue      String?
+  createdAt  DateTime @default(now())
+
+  users       User[]
+  homeMatches Match[]  @relation("HomeTeam")
+  awayMatches Match[]  @relation("AwayTeam")
+  threads     Thread[] @relation("TeamThreads")
+}
+
+model Match {
+  id         Int      @id @default(autoincrement())
+  externalId Int      @unique
+  matchday   Int?
+  utcDate    DateTime
+  status     String
+  stage      String?
+  group      String?
+  homeTeamId Int
+  awayTeamId Int
+  homeScore  Int?
+  awayScore  Int?
+  venue      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  homeTeam   Team     @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam   Team     @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  threads    Thread[] @relation("MatchThreads")
+}
+
+model Thread {
+  id            Int      @id @default(autoincrement())
+  title         String
+  content       String
+  type          String
+  isAutoCreated Boolean  @default(false)
+  isHidden      Boolean  @default(false)
+  authorId      Int
+  teamId        Int?
+  matchId       Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  author   User          @relation(fields: [authorId], references: [id])
+  team     Team?         @relation("TeamThreads", fields: [teamId], references: [id])
+  match    Match?        @relation("MatchThreads", fields: [matchId], references: [id])
+  posts    Post[]
+  polls    Poll[]
+  reports  Report[]
+  tags     ThreadTag[]
+  likes    ThreadLike[]
+}
+
+model Tag {
+  id      Int         @id @default(autoincrement())
+  name    String      @unique
+  threads ThreadTag[]
+}
+
+model ThreadTag {
+  threadId Int
+  tagId    Int
+
+  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([threadId, tagId])
+}
+
+model Post {
+  id        Int      @id @default(autoincrement())
+  content   String
+  threadId  Int
+  authorId  Int
+  parentId  Int?
+  isHidden  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  thread   Thread        @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  author   User          @relation(fields: [authorId], references: [id])
+  parent   Post?         @relation("PostReplies", fields: [parentId], references: [id])
+  replies  Post[]        @relation("PostReplies")
+  versions PostVersion[]
+  reports  Report[]
+  likes    PostLike[]
+}
+
+model PostLike {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  postId    Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+}
+
+model ThreadLike {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  threadId  Int
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, threadId])
+}
+
+model PostVersion {
+  id        Int      @id @default(autoincrement())
+  content   String
+  postId    Int
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model Poll {
+  id        Int      @id @default(autoincrement())
+  question  String
+  threadId  Int
+  authorId  Int
+  deadline  DateTime
+  isHidden  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  thread  Thread       @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  author  User         @relation(fields: [authorId], references: [id])
+  options PollOption[]
+  votes   PollVote[]
+  reports Report[]
+}
+
+model PollOption {
+  id     Int    @id @default(autoincrement())
+  text   String
+  pollId Int
+
+  poll  Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes PollVote[]
+}
+
+model PollVote {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  pollId       Int
+  pollOptionId Int
+  createdAt    DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id])
+  poll       Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  pollOption PollOption @relation(fields: [pollOptionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pollId])
+}
+
+model Report {
+  id         Int      @id @default(autoincrement())
+  reason     String
+  status     String   @default("PENDING")
+  aiVerdict  String?
+  aiScore    Float?
+  reporterId Int
+  threadId   Int?
+  postId     Int?
+  pollId     Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  reporter User    @relation("Reporter", fields: [reporterId], references: [id])
+  thread   Thread? @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  post     Post?   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  poll     Poll?   @relation(fields: [pollId], references: [id], onDelete: Cascade)
+}
+
+model Follow {
+  id          Int      @id @default(autoincrement())
+  followerId  Int
+  followingId Int
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("Follower", fields: [followerId], references: [id])
+  following User @relation("Following", fields: [followingId], references: [id])
+
+  @@unique([followerId, followingId])
+}
+
+model Appeal {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  reason    String
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Translation {
+  id             Int      @id @default(autoincrement())
+  originalText   String
+  translatedText String
+  textHash       String   @unique
+  createdAt      DateTime @default(now())
+}
+
+model DailyDigest {
+  id        Int      @id @default(autoincrement())
+  content   String
+  date      String   @unique
+  createdAt DateTime @default(now())
+}
